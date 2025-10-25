@@ -1,0 +1,231 @@
+---
+title: "project1"
+format: html
+editor: visual
+---
+
+Preparing, cleaning data:
+
+```{r}
+library(tidyr)
+library(tidyverse)
+library(RColorBrewer)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(scales)  
+
+
+
+```
+
+#load csv
+
+```{r}
+mta <- read.csv("data/MTA_Daily_Ridership_Data__2020_-_2025.csv", header = TRUE)
+
+```
+
+```{r}
+
+
+# Converts date into Date type
+mta <- mta |> 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y"))
+
+# Creates year, month, and day columns based on revised Date column
+mta<- mta |> mutate(year = year(Date), 
+               month = month(Date), 
+               day = day(Date))
+#View(mta)
+
+```
+
+```{r}
+#Check for missing values:
+colSums(is.na(mta))
+
+```
+
+```{r}
+#Sorting based on the date
+mta <- mta |> arrange(Date)
+View(mta)
+
+```
+
+```{r}
+mta <- mta |> mutate(
+  Pandemic_Phase = case_when(Date < as.Date("2020-03-15") ~ "Pre-Pandemic",
+    Date >= as.Date("2020-03-15") & Date <= as.Date("2020-06-30") ~ "Peak-Lockdown",
+    TRUE ~ "Recovery"
+  )
+)
+
+View(mta)
+
+```
+
+```{r}
+#Rename
+
+mta <- mta |> rename(
+  Subway = "Subways..Total.Estimated.Ridership",
+  Bus = "Buses..Total.Estimated.Ridership",
+  LIRR = "LIRR..Total.Estimated.Ridership",
+  MetroNorth = "Metro.North..Total.Estimated.Ridership",
+  StatenIslandRailway = "Staten.Island.Railway..Total.Estimated.Ridership",
+  AccessARide = "Access.A.Ride..Total.Scheduled.Trips",
+  BridgesTunnels = "Bridges.and.Tunnels..Total.Traffic",
+  Subway_Ratio = "Subways....of.Comparable.Pre.Pandemic.Day",
+  Bus_Ratio = "Buses....of.Comparable.Pre.Pandemic.Day",
+  LIRR_Ratio = "LIRR....of.Comparable.Pre.Pandemic.Day",
+  MetroNorth_Ratio = "Metro.North....of.Comparable.Pre.Pandemic.Day",
+  StatenIslandRailway_Ratio = "Staten.Island.Railway....of.Comparable.Pre.Pandemic.Day",
+  AccessARide_Ratio = "Access.A.Ride....of.Comparable.Pre.Pandemic.Day",
+  BridgesTunnels_Ratio = "Bridges.and.Tunnels....of.Comparable.Pre.Pandemic.Day"
+  )
+```
+
+```{r}
+mta <- mta |> 
+  pivot_longer(
+    cols = c(Subway, Bus, LIRR, MetroNorth, StatenIslandRailway, AccessARide, BridgesTunnels),
+    names_to = "Transport_Mode",
+    values_to = "Total_Ridership"
+  )
+
+mta <- mta |>
+  mutate(Usage_Ratio = case_when(
+    Transport_Mode == "Subway" ~ Subway_Ratio,
+    Transport_Mode == "Bus" ~ Bus_Ratio,
+    Transport_Mode == "LIRR" ~ LIRR_Ratio,
+    Transport_Mode == "MetroNorth" ~ MetroNorth_Ratio,
+    Transport_Mode == "AccessARide" ~ AccessARide_Ratio,
+    Transport_Mode == "BridgesTunnels" ~ BridgesTunnels_Ratio,
+    Transport_Mode == "StatenIslandRailway" ~ StatenIslandRailway_Ratio,
+    TRUE ~ NA_real_
+  ))
+mta_clean <- mta |>
+  select(Date,year,month,day,Pandemic_Phase,Transport_Mode,Total_Ridership, Usage_Ratio)
+View(mta_clean)
+```
+
+```{r}
+#save new dataset as a csv
+write.csv(mta_clean, "MTA_Ridership_Revised.csv", row.names = FALSE)
+
+```
+
+Graphs:
+
+```{r}
+# Filter to include only bus and subway modes 
+mta_filtered <- mta_clean |>
+  filter(Transport_Mode %in% c("Subway", "Bus"))
+
+ggplot(mta_filtered, aes(x = Total_Ridership, fill = Transport_Mode)) +
+  geom_histogram(binwidth = 500000, color = "white", alpha = 0.8) +
+  labs(
+    title = "Distribution of Daily Total Ridership for Bus and Subway in New York City, 2020–2025",
+    x = "Daily Total Ridership",
+    y = "Number of Days",
+    fill = "Transportation mode",
+    caption = str_wrap("Each bar represents the number of days that fall within a given ridership range. The data illustrate that subway ridership tends to be higher and more variable than bus ridership, reflecting differences in passenger volume and travel behavior across the whole period.",width=90)
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(size = 14, hjust = 0.5, face = "bold")
+    ,
+    plot.caption = element_text(size = 9, hjust = 0.5)
+
+  ) +
+  scale_x_continuous(labels = comma) 
+
+ggsave("Plots/plot1.png", width = 10, height = 6, dpi = 300)
+
+```
+
+
+
+
+
+```{r}
+
+mta_summary <- mta_clean|>
+  group_by(Pandemic_Phase,Transport_Mode)|>
+  summarise(avarage_ridership = mean(Total_Ridership, na.rm =TRUE))
+
+mta_summary$Pandemic_Phase <- factor(
+  mta_summary$Pandemic_Phase,
+  levels = c("Pre-Pandemic", "Peak-Lockdown", "Recovery")
+)
+ggplot(mta_summary, aes(x = Pandemic_Phase, y = avarage_ridership, fill = Transport_Mode)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "MTA Daily Ridership Data, 2020–2025: Average Ridership by Pandemic Phase and Transport Mode",
+    x = "Pandemic Phase",
+    y = "Average Daily Ridership",
+    fill = "Transport Mode",
+    caption = str_wrap("This bar chart presents the average daily ridership across different MTA transportation modes, during three distinct pandemic phases: Pre-Pandemic(data before 2020-03-15, Peak-Lockdown(data between 2020-03-15 and 2020-06-30), and Recovery(data after 2020-06-30) . Each bar represents the mean total ridership for a transport mode within a given phase. The graph illustrates how ridership dramatically decreased during the lockdown and gradually rebounded during recovery, with subway and bus systems consistently having the highest passenger volumes.", width=100))+
+  theme_minimal()+
+  scale_y_continuous(labels = comma )
+
+ggsave("Plots/plot2.png", width = 10, height = 6, dpi = 300)
+
+```
+
+```{r}
+mta_filtered$Pandemic_Phase <- factor(
+  mta_filtered$Pandemic_Phase,
+  levels = c("Pre-Pandemic", "Peak-Lockdown", "Recovery")
+)
+ggplot(mta_filtered, aes(x = Transport_Mode, y = Total_Ridership, fill = Transport_Mode)) +
+  geom_boxplot() +
+  labs(
+    title = "MTA Daily Ridership Data, 2020–2025: Distribution for Bus and Subway ridership by Pandemic Phase",
+    x = "Transport Mode",
+    y = "Total Ridership",
+    caption = str_wrap(
+      "This boxplot shows the distribution of daily ridership across different MTA transportation modes during three distinct pandemic phases: Pre-Pandemic (data before 2020-03-15), Peak-Lockdown (data between 2020-03-15 and 2020-06-30), and Recovery (data after 2020-06-30). Each box represents the spread of total daily ridership for a transport mode within a given phase, highlighting how ridership dramatically decreased during the lockdown and gradually rebounded during recovery, with subway and bus systems consistently having the highest passenger volumes. It allows to clearly compare main statistics and notice some outliers in the lockdown phase",
+      width = 90
+    )
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12))+
+  facet_wrap(vars(Pandemic_Phase))+
+  scale_y_continuous(labels = comma )
+
+ggsave("Plots/plot3.png", width = 10, height = 6, dpi = 300)
+
+```
+
+```{r}
+mta_monthly <- mta_clean |>
+  filter(year != 2025) |> 
+  group_by(year, month, Transport_Mode) |>
+  summarise(
+    avg_ridership = mean(Total_Ridership, na.rm = TRUE),
+    avg_usage = mean(Usage_Ratio, na.rm = TRUE)
+  )
+
+ggplot(mta_monthly, aes(x = month, y = avg_ridership, color = Transport_Mode, group = Transport_Mode)) +
+  geom_line(size = 1) +
+  facet_wrap(vars(year)) +
+  labs(
+    title = "Monthly Average MTA Ridership by Transport Mode, New York, 2020–2025",
+    x = "Month",
+    y = "Average Daily Ridership",
+    color = "Transport Mode",
+    caption = str_wrap(
+      "This line chart presents the average daily ridership for each MTA transport mode in New York City, grouped by month and year. Data is aggregated from 2020 to 2025, showing trends across the Pre-Pandemic, Peak-Lockdown, and Recovery phases. Each line represents the monthly mean total ridership for a given transport mode, illustrating how ridership fluctuated seasonally and was impacted by pandemic-related restrictions. ",
+      width = 90
+    )
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 13),
+        axis.text.x = element_text(angle = 55)) +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(breaks = 1:12, labels = month.abb)
+ggsave("Plots/plot4.png", width = 10, height = 6, dpi = 300)
+
+```
