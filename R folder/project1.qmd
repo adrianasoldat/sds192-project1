@@ -131,7 +131,7 @@ ggplot(mta_filtered, aes(x = Total_Ridership, fill = Transport_Mode)) +
     x = "Daily Total Ridership",
     y = "Number of Days",
     fill = "Transportation mode",
-    caption = str_wrap("Each bar represents the number of days that fall within a given ridership range. The data illustrate that subway ridership tends to be higher and more variable than bus ridership, reflecting differences in passenger volume and travel behavior across the whole period.",width=90)
+    caption = str_wrap("Each bar represents the number of days that fall within a given ridership range. The data illustrate that subway ridership tends to be higher and more variable than bus ridership, reflecting differences in passenger volume and travel behavior across the whole period.",width=150)
   ) +
   theme_minimal(base_size = 12) +
   theme(
@@ -166,7 +166,7 @@ ggplot(mta_summary, aes(x = Pandemic_Phase, y = avarage_ridership, fill = Transp
     x = "Pandemic Phase",
     y = "Average Daily Ridership",
     fill = "Transport Mode",
-    caption = str_wrap("This bar chart presents the average daily ridership across different MTA transportation modes, during three distinct pandemic phases: Pre-Pandemic(data before 2020-03-15, Peak-Lockdown(data between 2020-03-15 and 2020-06-30), and Recovery(data after 2020-06-30) . Each bar represents the mean total ridership for a transport mode within a given phase. The graph illustrates how ridership dramatically decreased during the lockdown and gradually rebounded during recovery, with subway and bus systems consistently having the highest passenger volumes.", width=100))+
+    caption = str_wrap("This bar chart presents the average daily ridership across different MTA transportation modes, during three distinct pandemic phases: Pre-Pandemic(data before 2020-03-15, Peak-Lockdown(data between 2020-03-15 and 2020-06-30), and Recovery(data after 2020-06-30) . Each bar represents the mean total ridership for a transport mode within a given phase. The graph illustrates how ridership dramatically decreased during the lockdown and gradually rebounded during recovery, with subway and bus systems consistently having the highest passenger volumes.", width=140))+
   theme_minimal()+
   scale_y_continuous(labels = comma )
 
@@ -187,7 +187,7 @@ ggplot(mta_filtered, aes(x = Transport_Mode, y = Total_Ridership, fill = Transpo
     y = "Total Ridership",
     caption = str_wrap(
       "This boxplot shows the distribution of daily ridership across different MTA transportation modes during three distinct pandemic phases: Pre-Pandemic (data before 2020-03-15), Peak-Lockdown (data between 2020-03-15 and 2020-06-30), and Recovery (data after 2020-06-30). Each box represents the spread of total daily ridership for a transport mode within a given phase, highlighting how ridership dramatically decreased during the lockdown and gradually rebounded during recovery, with subway and bus systems consistently having the highest passenger volumes. It allows to clearly compare main statistics and notice some outliers in the lockdown phase",
-      width = 90
+      width = 150
     )
   ) +
   theme_minimal() +
